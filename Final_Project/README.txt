@@ -5,4 +5,4 @@ I was successful in generating .html files for both the heatmap and the map mark
 the map markers file I created is nearly 800 mbs, after reducing it to only include loans that went to 
 collections. I will add a copy of the .html files in the Maps folder in this project’s GitHub repo. 
 
-To run this program, save all files and folders in one folder. Then, run main.py.
+To run this program, save main.py and the Data folder in one folder. Then, run main.py.
