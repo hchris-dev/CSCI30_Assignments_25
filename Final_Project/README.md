@@ -1,12 +1,14 @@
 # PPP Loan Heatmap and Collections Markers
 The purpose of this project was to map which states received the most in Paycheck Protection 
 Program loans, as well as mark the location of businesses that received loans.  
-I used Pandas as well as the Folium library for this project. 
-I was successful in generating .html files for both the heatmap and the map markers. However, 
-the map markers file I created is nearly 800 mbs, after reducing it to only include loans that went to 
-collections. I will add a copy of the .html files in the Maps folder in this project’s GitHub repo. 
+I used Pandas, Folium, and PyQt6 for this project. 
+
+This program can generate and display maps of loan recipients in each state.
 
 To run this program, save main.py and the Data folder in one folder. Then, run main.py.
 
-### PPP Loan Heatmap
-<img width="500" height="500" alt="Screenshot 2025-12-07 233004" src="https://github.com/user-attachments/assets/ccb1d16f-d416-44ae-be37-7537d9590414" />
+### Program UI
+
+<img width="764" height="527" alt="Screenshot 2025-12-15 113740" src="https://github.com/user-attachments/assets/839ebd6a-72c3-484a-8d3b-72ac35d89cb6" />
+
+<img width="764" height="527" alt="Screenshot 2025-12-15 113832" src="https://github.com/user-attachments/assets/0a0049b5-a453-4092-add6-2614a19650db" />
