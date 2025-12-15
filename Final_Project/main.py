@@ -1,9 +1,15 @@
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, QLabel, QHBoxLayout, QLineEdit, QComboBox, QVBoxLayout
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtCore import QUrl
+from PyQt6.QtWebEngineCore import QWebEngineSettings
 import folium
 import pandas as pd
 import os
 import glob
 import random
-import requests
+
+import sys
+from pathlib import Path
 
 path = os.getcwd()
 csv_files = glob.glob(os.path.join("Data", "*.csv"))
@@ -38,52 +44,119 @@ df_latLong["BorrowerState"] = df_latLong["BorrowerState"].str.upper()
 df_PPPcoords = pd.merge(df_PPPall, df_latLong, on=["BorrowerCity", "BorrowerState"])
 df_PPPcoords.dropna(subset=["lat", "lng", "LoanStatus", "BusinessType", "BorrowerName", "InitialApprovalAmount"], inplace=True)
 
-PPPMarkers = folium.Map([38.540, -98.328], zoom_start=4, tiles='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+PPPUserDefined = folium.Map([38.540, -98.328], zoom_start=4, tiles='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
                          attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>')
 
-PPPHeatMap = folium.Map([38.540, -98.328], zoom_start=4, tiles='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>')
+def bigMapFunction(dataframe, map, state, extra, mapStyle):
+    if mapStyle == "Circle":
+        if extra == "None":
+            for row in dataframe.itertuples():    
+                if row.BorrowerState == str(state) :
+                    folium.Circle(
+                    location=[row.lat + (round(random.uniform(0.0000, 0.01), 5)),
+                            row.lng + (round(random.uniform(0.0000, 0.01), 5))],
+                    radius = 2,
+                    color = "cornflowerblue",
+                    stroke=False,
+                    fill = True,
+                    fill_opacity = 0.6,
+                    opacity = 1,
+                    ).add_to(map)
+        elif extra == "Nonprofit":
+            for row in dataframe.itertuples():    
+                if (row.BorrowerState == str(state)) and (row.NonProfit == "Y"):
+                    folium.Circle(
+                    location=[row.lat + (round(random.uniform(0.0000, 0.01), 5)),
+                            row.lng + (round(random.uniform(0.0000, 0.01), 5))],
+                    radius = 2,
+                    color = "cornflowerblue",
+                    stroke=False,
+                    fill = True,
+                    fill_opacity = 0.6,
+                    opacity = 1,
+                    ).add_to(map)
+        else:
+            for row in dataframe.itertuples():    
+                if (row.BorrowerState == str(state)) and (row.Veteran == "Veteran"):
+                    folium.Circle(
+                    location=[row.lat + (round(random.uniform(0.0000, 0.01), 5)),
+                            row.lng + (round(random.uniform(0.0000, 0.01), 5))],
+                    radius = 2,
+                    color = "cornflowerblue",
+                    stroke=False,
+                    fill = True,
+                    fill_opacity = 0.6,
+                    opacity = 1,
+                    ).add_to(map)
 
-'''for row in df_PPPcoords.itertuples():
-    folium.Marker(
-    location=[row.lat + (round(random.uniform(0.0000, 0.0010), 5)),
-               row.lng + (round(random.uniform(0.0000, 0.0010), 5))],
-    tooltip="Click me!",
-    popup=str(row.BorrowerName),
-    icon=folium.Icon(color="green"),
-    ).add_to(PPPMarkers)''' #This loop ran for 2 hours before I ended it
-#10 million rows was too much
+# CSVs will take a minute or so to merge
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
 
-for row in df_PPPcoords.itertuples():
-    if row.LoanStatus == "Charged Off":
-        folium.Marker(
-        location=[row.lat + (round(random.uniform(0.0000, 0.0010), 5)),
-                row.lng + (round(random.uniform(0.0000, 0.0010), 5))],
-        tooltip=str(row.BorrowerName),
-        popup=str(row.BorrowerName) + "\n" + str(row.InitialApprovalAmount) + "\n" + str(row.BusinessType),
-        icon=folium.Icon(color="red"),
-        ).add_to(PPPMarkers)
-    
-PPPMarkers.save("LoansInCollections.html") #Creates LoansInCollections.html, copy in Maps Folder
+        self.setWindowTitle("PPP Visualizer")
 
-stateLoans = df_PPPall.groupby("BorrowerState")["InitialApprovalAmount"].sum().reset_index()
+        self.browser = QWebEngineView()
+        settings = self.browser.settings()
+        settings.setAttribute(
+            QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls,
+            True
+        )
+        settings.setAttribute(
+            QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls,
+            True
+        )
 
-state_geo = requests.get(
-    "https://raw.githubusercontent.com/python-visualization/folium-example-data/main/us_states.json"
-).json() #from Folium getting started
+        BASE_DIR = Path(__file__).resolve().parent
+        html_path = BASE_DIR / "Maps" / "PPPVisualizerMap.html"
+        self.browser.load(QUrl.fromLocalFile(str(html_path)))
 
-folium.Choropleth(
-    geo_data=state_geo,
-    name="choropleth",
-    data=stateLoans,
-    columns=["BorrowerState", "InitialApprovalAmount"],
-    key_on="feature.id",
-    fill_color="YlGn",
-    fill_opacity=0.7,
-    line_opacity=0.2,
-    legend_name="Sum of Loans By State",
-).add_to(PPPHeatMap)
+        layoutLeft = QVBoxLayout()
+        layoutRight = QHBoxLayout()
+        layoutBoth = QHBoxLayout()
 
-folium.LayerControl().add_to(PPPHeatMap)
+        widgets = [  QComboBox, QLabel, QLineEdit, QPushButton, ]
 
-PPPHeatMap.save("LoanHeatMap.html") #Creates LoansInCollections.html, copy in Maps Folder
+        self.stateDropdown = QComboBox()
+        self.stateDropdown.addItems([
+            "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+            "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY" ])
+        #styleDropdown = QLabel("Style: Circle") #taking out icons bc they are slow and make large files
+        self.extraDropdown = QComboBox()
+        self.extraDropdown.addItems(["None", "Veteran", "Nonprofit"])
+
+        generateButton = QPushButton("Generate Map")
+        generateButton.clicked.connect(self.generateMap)
+
+        layoutLeft.addWidget(self.stateDropdown)
+        #layoutLeft.addWidget(styleDropdown)
+        layoutLeft.addWidget(self.extraDropdown)
+        layoutLeft.addWidget(generateButton)
+
+        layoutRight.addWidget(self.browser)
+
+        layoutBoth.addLayout(layoutLeft)
+        layoutBoth.addLayout(layoutRight)
+
+        widget = QWidget()
+        widget.setLayout(layoutBoth)
+        self.setCentralWidget(widget)
+
+    def generateMap(self):
+            BASE_DIR = Path(__file__).resolve().parent
+            html_path = BASE_DIR / "Maps" / "PPPVisualizerMap.html"
+
+            PPPUserDefined = folium.Map([38.540, -98.328], zoom_start=4,
+                tiles='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attr='&copy; OpenStreetMap contributors &copy; CARTO' )
+
+            bigMapFunction(df_PPPcoords, PPPUserDefined, self.stateDropdown.currentText(), self.extraDropdown.currentText(), "Circle")
+
+            PPPUserDefined.save(html_path)
+
+            self.browser.load(QUrl.fromLocalFile(str(html_path)))
+
+
+app = QApplication(sys.argv)
+window = MainWindow()
+window.show()
+app.exec()
